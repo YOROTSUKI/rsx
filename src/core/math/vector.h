@@ -281,7 +281,3 @@ public:
 
 	RadianEuler ToEuler() const;
 };
-
-void VectorYawRotate(const Vector& in, float flYaw, Vector& out);
-
-void NormalizeAngles(QAngle& angles);

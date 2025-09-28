@@ -95,7 +95,7 @@ namespace smd
 
 		void AddMeshCapacity(const size_t numTriangles)
 		{
-			assertm(triangles.size() == triangles.capacity(), "mismatched indices");
+			//assertm(triangles.size() == triangles.capacity(), "mismatched indices");
 
 			triangles.reserve(triangles.size() + numTriangles);
 		}

@@ -19,52 +19,6 @@ void MatrixSetColumn(const Vector& in, int column, matrix3x4_t& out)
 	out[2][column] = in.z;
 }
 
-// https://github.com/ValveSoftware/source-sdk-2013/blob/master/sp/src/mathlib/mathlib_base.cpp#L1857
-void QuaternionMatrix(const Quaternion& q, const Vector& pos, matrix3x4_t& matrix)
-{
-#ifdef MATH_ASSERTS
-	assert(pos.IsValid());
-#endif // MATH_ASSERTS
-
-	QuaternionMatrix(q, matrix);
-
-	matrix[0][3] = pos.x;
-	matrix[1][3] = pos.y;
-	matrix[2][3] = pos.z;
-}
-
-// https://github.com/ValveSoftware/source-sdk-2013/blob/master/sp/src/mathlib/mathlib_base.cpp#L1868
-void QuaternionMatrix(const Quaternion& q, matrix3x4_t& matrix)
-{
-#ifdef MATH_ASSERTS
-	assert(q.IsValid());
-#endif // MATH_ASSERTS
-
-	matrix[0][0] = 1.0f - 2.0f * q.y * q.y - 2.0f * q.z * q.z;
-	matrix[1][0] = 2.0f * q.x * q.y + 2.0f * q.w * q.z;
-	matrix[2][0] = 2.0f * q.x * q.z - 2.0f * q.w * q.y;
-
-	matrix[0][1] = 2.0f * q.x * q.y - 2.0f * q.w * q.z;
-	matrix[1][1] = 1.0f - 2.0f * q.x * q.x - 2.0f * q.z * q.z;
-	matrix[2][1] = 2.0f * q.y * q.z + 2.0f * q.w * q.x;
-
-	matrix[0][2] = 2.0f * q.x * q.z + 2.0f * q.w * q.y;
-	matrix[1][2] = 2.0f * q.y * q.z - 2.0f * q.w * q.x;
-	matrix[2][2] = 1.0f - 2.0f * q.x * q.x - 2.0f * q.y * q.y;
-
-	matrix[0][3] = 0.0f;
-	matrix[1][3] = 0.0f;
-	matrix[2][3] = 0.0f;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Generates Euler angles given a left-handed orientation matrix. The
-//			columns of the matrix contain the forward, left, and up vectors.
-// Input  : matrix - Left-handed orientation matrix.
-//			angles[PITCH, YAW, ROLL]. Receives right-handed counterclockwise
-//				rotations in degrees around Y, Z, and X respectively.
-//-----------------------------------------------------------------------------
-
 // https://github.com/ValveSoftware/source-sdk-2013/blob/master/sp/src/mathlib/mathlib_base.cpp#L144
 void MatrixAngles(const matrix3x4_t& matrix, RadianEuler& angles, Vector& position)
 {

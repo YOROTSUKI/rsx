@@ -914,8 +914,6 @@ void ParseAnimDesc_R5(seqdesc_t* const seqdesc, animdesc_t* const animdesc, cons
 				Vector pos(positions[bone]);
 				Quaternion q(quats[bone]);
 				Vector scale(scales[bone]);
-				RadianEuler baseRot(rotations[bone]);
-
 
 				uint8_t boneFlags = ANIM_BONEFLAGS_FLAG(boneFlagArray, bone); // truncate byte offset then shift if needed
 				const uint8_t* panimtrack = reinterpret_cast<const uint8_t*>(panim + 1);
@@ -935,14 +933,36 @@ void ParseAnimDesc_R5(seqdesc_t* const seqdesc, animdesc_t* const animdesc, cons
 					}
 
 					if (boneFlags & r5::RleBoneFlags_t::STUDIO_ANIM_SCALE)
-						r5::CalcBoneScale_DP(sectionlength, &panimtrack, fLocalFrame, pos);
+						r5::CalcBoneScale_DP(sectionlength, &panimtrack, fLocalFrame, scale);
 
 					panim = panim->pNext();
 				}
 
+				// [rika]: non delta animations are stored like a delta? weird.
 				if (!(animdesc->flags & eStudioAnimFlags::ANIM_DELTA))
 				{
+					const ModelBone_t* const boneData = &bones->at(bone);
+					
+					// [rika]: adjust the rotation
+					QuaternionMult(boneData->quat, q, q);
 
+					// [rika]: reorient the position with the bone's rotation
+					Quaternion posQ(pos.x, pos.y, pos.z, 0.0f);
+					QuaternionMult(boneData->quat, posQ, posQ);
+
+					// [rika]: get the bones inverted quaternion rotation
+					Quaternion qBoneInverse;
+					QuaternionConjugate(boneData->quat, qBoneInverse);
+
+					// [rika]: reorient by inverted quaternion rotation
+					QuaternionMult(posQ, qBoneInverse, posQ);
+
+					pos.x = posQ.x;
+					pos.y = posQ.y;
+					pos.z = posQ.z;
+
+					// [rika]: add the bones positon on top
+					pos += boneData->pos;
 				}
 
 				assertm(pos.IsValid(), "invalid position");

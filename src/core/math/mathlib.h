@@ -1,14 +1,31 @@
 #pragma once
+
 #include <DirectXMath.h>
 using namespace DirectX;
 
-constexpr float s_DEG2RAD_CONST = (XM_PI / 180.f);
-constexpr float s_RAD2DEG_CONST = (180.f / XM_PI);
+#ifndef M_PI
+#define M_PI XM_PI
+#endif
+
+
+constexpr float s_DEG2RAD_CONST = (M_PI / 180.f);
+constexpr float s_RAD2DEG_CONST = (180.f / M_PI);
 #define DEG2RAD(x) (static_cast<float>(x) * s_DEG2RAD_CONST)
 #define RAD2DEG(x) (static_cast<float>(x) * s_RAD2DEG_CONST)
 
 #if MATH_SIMD
 
+// static defines
+static constexpr __m128 simd_Four_Zeros = { 0.0f, 0.0f, 0.0f, 0.0f };
+static constexpr __m128 simd_Four_NegZeroes = { -0.0f, -0.0f, -0.0f, -0.0f };
+static constexpr __m128 simd_Four_PointFives = { 0.5f, 0.5f, 0.5f, 0.5f };
+static constexpr __m128 simd_Four_Ones = { 1.0f, 1.0f, 1.0f, 1.0f };
+static constexpr __m128 simd_Four_Threes = { 3.0f, 3.0f, 3.0f, 3.0f };
+
+static constexpr __m128 simd_NegativeMask = { .m128_u32 = { 0x80000000, 0x80000000, 0x80000000, 0x80000000 } };
+
+
+// source engine macros
 // [rika]: I do not like these
 #define SubFloat(m, i) (m.m128_f32[i])
 #define SubInt(m, i) (m.m128_i32[i])
@@ -49,14 +66,8 @@ __forceinline __m128 AndNotSIMD(const __m128& a, const __m128& b)			// ~a & b
 	return retVal;
 }
 
-static constexpr __m128 simd_Four_Zeros = { 0.0f, 0.0f, 0.0f, 0.0f };
-static constexpr __m128 simd_Four_NegZeroes = { -0.0f, -0.0f, -0.0f, -0.0f };
-static constexpr __m128 simd_Four_PointFives = { 0.5f, 0.5f, 0.5f, 0.5f };
-static constexpr __m128 simd_Four_Ones = { 1.0f, 1.0f, 1.0f, 1.0f };
-static constexpr __m128 simd_Four_Threes = { 3.0f, 3.0f, 3.0f, 3.0f };
 
-static constexpr __m128 simd_NegativeMask = { .m128_u32 = { 0x80000000, 0x80000000, 0x80000000, 0x80000000 } };
-
+// inline simd math funcs
 __forceinline __m128 MaskedAssign(const __m128& ReplacementMask, const __m128& NewValue, const __m128& OldValue)
 {
 	//return _mm_or_ps( _mm_add_ps(ReplacementMask, NewValue), _mm_andnot_ps(ReplacementMask, OldValue));
@@ -88,6 +99,11 @@ __forceinline __m128 SubSIMD(const __m128& a, const __m128& b)
 __forceinline __m128 MaddSIMD(const __m128& a, const __m128& b, const __m128& c)
 {
 	return AddSIMD(MulSIMD(a, b), c);
+}
+
+__forceinline __m128 NegateSIMD(const __m128& a)
+{
+	return _mm_sub_ps(simd_Four_Zeros, a);
 }
 
 // 1/sqrt(a), more or less
@@ -182,8 +198,8 @@ struct matrix3x4_t;
 
 // lovely chunk of quaternion functions from source
 // https://github.com/ValveSoftware/source-sdk-2013/blob/master/sp/src/public/mathlib/mathlib.h#L594
-
-
+void QuaternionSlerp(const Quaternion& p, const Quaternion& q, float t, Quaternion& qt);
+void QuaternionSlerpNoAlign(const Quaternion& p, const Quaternion& q, float t, Quaternion& qt);
 void QuaternionBlend(const Quaternion& p, const Quaternion& q, float t, Quaternion& qt);
 void QuaternionBlendNoAlign(const Quaternion& p, const Quaternion& q, float t, Quaternion& qt);
 
@@ -191,14 +207,19 @@ void QuaternionBlendNoAlign(const Quaternion& p, const Quaternion& q, float t, Q
 
 void QuaternionAlign(const Quaternion& p, const Quaternion& q, Quaternion& qt);
 
-
+void QuaternionConjugate(const Quaternion& p, Quaternion& q);
 
 float QuaternionNormalize(Quaternion& q);
 
-
+void QuaternionMult(const Quaternion& p, const Quaternion& q, Quaternion& qt);
 void QuaternionMatrix(const Quaternion& q, matrix3x4_t& matrix);
 void QuaternionMatrix(const Quaternion& q, const Vector& pos, matrix3x4_t& matrix);
 void QuaternionAngles(const Quaternion& q, QAngle& angles);
 void AngleQuaternion(const QAngle& angles, Quaternion& qt);
 void QuaternionAngles(const Quaternion& q, RadianEuler& angles);
 void AngleQuaternion(RadianEuler const& angles, Quaternion& qt);
+
+// misc vector funcs
+void VectorYawRotate(const Vector& in, float flYaw, Vector& out);
+
+void NormalizeAngles(QAngle& angles);

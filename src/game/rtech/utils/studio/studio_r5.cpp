@@ -361,97 +361,10 @@ namespace r5
 			Quaternion q2;
 			AnimQuat32::Unpack(q2, pPackedData[validIdx], &pAxisFixup[nextFrame]);
 
-			// load the quats into simd registers
-			__m128 q1v = _mm_load_ps(q1.Base());
-			__m128 q2v = _mm_load_ps(q2.Base());
-
-			// align quaternion ?
-			float dp = DotSIMD(q1v, q2v);
-
-			if (dp < 0.0f)
-			{
-				q1v = _mm_xor_ps(q1v, simd_NegativeMask);
-				dp = -dp;
-			}
-
-			// QuaternionSlerp ?
-			// dp >= 0.99619472 ?
-			// dp == 1.0f ?
-			if (dp <= 0.99619472)
-			{
-				const float acos = acosf(dp);
-				
-				//__m128 v38 = (__m128)0x3F800000u;
-				__m128 simd_acos_slerp = { 1.0f, 1.0f, 1.0f, 1.0f };
-				simd_acos_slerp.m128_f32[0] = (1.0f - s) * acos;
-
-				const float acos_interp = acos * s;
-
-				__m128 simd_acos = simd_Four_Zeros;
-				simd_acos.m128_f32[0] = acos;
-
-				__m128 simd_acos_interp = simd_Four_Zeros;
-				simd_acos_interp.m128_f32[0] = acos_interp;
-
-				const __m128 v42 = _mm_movelh_ps(_mm_unpacklo_ps(simd_acos_slerp, simd_acos_interp), _mm_unpacklo_ps(simd_acos, simd_acos));
-
-
-				__m128 v43 = v42;
-				v43.m128_f32[0] = sinf(v42.m128_f32[0]); // 0
-				__m128 v44 = v43;
-				const float v45 = sinf(_mm_shuffle_ps(v42, v42, 0x55).m128_f32[0]); // 1
-				const float v46 = sinf(_mm_shuffle_ps(v42, v42, 0xAA).m128_f32[0]); // 2
-				v43.m128_f32[0] = sinf(_mm_shuffle_ps(v42, v42, 0xff).m128_f32[0]); // 3
-				
-				//const __m128 simd_sin = _mm_sin_ps(v42);
-
-				__m128 v47 = _mm_shuffle_ps(v44, v44, _MM_SHUFFLE(3, 2, 0, 1));
-				v47.m128_f32[0] = v45;
-				__m128 v48 = _mm_shuffle_ps(v47, v47, _MM_SHUFFLE(3, 0, 1, 2));
-				v48.m128_f32[0] = v46;
-
-				__m128 v49 = _mm_shuffle_ps(v48, v48, _MM_SHUFFLE(0, 2, 1, 3));
-				v49.m128_f32[0] = v43.m128_f32[0];
-				__m128 v50 = _mm_shuffle_ps(v49, v49, _MM_SHUFFLE(0, 3, 2, 1));
-
-				const __m128 v50_0 = _mm_shuffle_ps(v50, v50, _MM_SHUFFLE(0, 0, 0, 0)); // for q1
-				const __m128 v50_1 = _mm_shuffle_ps(v50, v50, _MM_SHUFFLE(1, 1, 1, 1)); // for q2
-				const __m128 v50_2 = _mm_shuffle_ps(v50, v50, _MM_SHUFFLE(2, 2, 2, 2));
-
-				__m128 v52 = _mm_rcp_ps(v50_2);
-				__m128 v53 = _mm_sub_ps(_mm_add_ps(v52, v52), _mm_mul_ps(_mm_mul_ps(v52, v52), v50_2));
-
-				// (v50_1 * v53) * q1 + (v50_2 * v53) * q2 
-				const __m128 simd_result = _mm_add_ps(_mm_mul_ps(_mm_mul_ps(v50_1, v53), q2v), _mm_mul_ps(_mm_mul_ps(v50_0, v53), q1v));
-
-
-				_mm_store_ps(q.Base(), simd_result);
-
-				assertm(q.IsValid(), "invalid quaternion");
-			}
-			else
-			{
-				// q1 * (1.0f - s) + q2 * s;
-				const __m128 simd_s = ReplicateX4(s);
-				const __m128 simd_qinterp = AddSIMD(MulSIMD(SubSIMD(simd_Four_Ones, simd_s), q1v), MulSIMD(simd_s, q2v));
-
-				// BoneQuaternionNormalizeSIMD ?
-
-				// same function as above ?
-				// don't recalc if true
-				// simd_qinterp dot product
-				const __m128 simd_qinterp_dp = Dot4SIMD(simd_qinterp_dp, simd_qinterp_dp);
-				const __m128 simd_clamp_dp = _mm_max_ps(simd_qinterp_dp, simd_NegativeMask);
-
-				// newtwon raphson rsqrt 
-				const __m128 simd_recp_sqrt = ReciprocalSqrtSIMD(simd_clamp_dp);
-				const __m128 simd_result = MulSIMD(simd_recp_sqrt, simd_qinterp);
-
-				_mm_store_ps(q.Base(), simd_result);
-
-				assertm(q.IsValid(), "invalid quaternion");
-			}
+			QuaternionSlerp(q1, q2, s, q);
 		}
+
+		assertm(q.IsValid(), "invalid quaternion");
 
 		// [rika]: advance the data ptr for other functions
 		*panimtrack = reinterpret_cast<const uint8_t*>(pAxisFixup + total);
@@ -603,7 +516,7 @@ namespace r5
 		if (dotProduct < 1.0f)
 		{
 			const float dprem = 1.0f - dotProduct;
-			if ((1.0f - dotProduct) < 0.0)
+			if (dprem < 0.0)
 				droppedComponent = sqrtf(dprem);
 			else
 				droppedComponent = FastSqrtFast(dprem); // fsqrt

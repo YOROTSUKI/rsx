@@ -47,5 +47,4 @@ inline void MatrixAngles(const matrix3x4_t& matrix, RadianEuler& angles)
 }
 
 void MatrixAngles(const matrix3x4_t& mat, RadianEuler& angles, Vector& position);
-
 void MatrixAngles(const matrix3x4_t& mat, Quaternion& q, Vector& position);

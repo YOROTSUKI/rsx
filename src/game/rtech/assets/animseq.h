@@ -617,7 +617,7 @@ private:
 			}
 
 			// [rika]: parse animation name strings
-			const char* end = seqdesc.szlabel;
+			const char* end = animdesc->pszName();
 			end += strnlen_s(end, MAX_PATH) + 1; // plus null terminator
 
 			ends[i] = end;

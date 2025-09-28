@@ -931,9 +931,9 @@ namespace r5
 		}
 
 		// saved components
-		uint32_t value0 : 7;
-		uint32_t value1 : 7;
-		uint32_t value2 : 7;
+		int value0 : 7;
+		int value1 : 7;
+		int value2 : 7;
 
 		uint32_t scaleFactor : 3; // used to set two different scaling floats for unpacking components
 		uint32_t droppedAxis : 2; // axis/indice of the dropped component

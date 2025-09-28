@@ -32,21 +32,18 @@ LPARAM CInput::WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			break;
 
 		// get the size of the buffer we need
-		UINT size = 0;
-		GetRawInputData((HRAWINPUT)lParam, RID_INPUT, NULL, &size, sizeof(RAWINPUTHEADER));
+		UINT size = sizeof(RAWINPUT);
 
-		char* data = new char[size];
+		// since we only capture raw mouse input, we only need sizeof(RAWINPUT)
+		char data[sizeof(RAWINPUT)];
+		GetRawInputData((HRAWINPUT)lParam, RID_INPUT, &data, &size, sizeof(RAWINPUTHEADER));
 
-		GetRawInputData((HRAWINPUT)lParam, RID_INPUT, data, &size, sizeof(RAWINPUTHEADER));
 		RAWINPUT* rawInput = reinterpret_cast<RAWINPUT*>(data);
-
 		if (rawInput->header.dwType == RIM_TYPEMOUSE)
 		{
 			this->mousedx = rawInput->data.mouse.lLastX;
 			this->mousedy = rawInput->data.mouse.lLastY;
 		}
-
-		delete[] data;
 
 		break;
 	}
@@ -64,6 +61,12 @@ LPARAM CInput::WndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	}
 	case WM_KILLFOCUS:
 	{
+		// if we lose focus to the window, another window will receive the input events, so for the extra viewport windows
+		// if they gain focus and we are still in the mouseCaptured state, you have a hard time exiting the mouse capture.
+		this->SetCursorVisible(true);
+		ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_NoMouse;
+		mouseCaptured = false;
+
 		this->ClearKeyStates();
 		break;
 	}
